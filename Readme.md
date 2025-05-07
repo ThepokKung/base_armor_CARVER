@@ -1,5 +1,7 @@
 # Coil Mapping Reference
 
+This code is referenced from an older version. Remove references to `touchless_switch` and `Alcohol`.
+
 ## Sensor Readings 
 
 | Coil Number | Function | Description |
@@ -19,9 +21,9 @@
 | 11          | led_green    | Activate green LED                       |
 | 12          | led_blue     | Activate blue LED                        |
 | 13          | led_off      | Turn off all LEDs                        |
-| 14          | white        | Activate all LEDs (white)                |
-| 15          | purple       | Activate red and green LEDs (purple)     |
-| 16          | yellow       | Activate red and blue LEDs (yellow)      |
-| 17          | indigo       | Activate green and blue LEDs (indigo)    |
+| 14          | led_white        | Activate all LEDs (white)                |
+| 15          | led_purple       | Activate red and green LEDs (purple)     |
+| 16          | led_yellow       | Activate red and blue LEDs (yellow)      |
+| 17          | led_indigo       | Activate green and blue LEDs (indigo)    |
 | 20          | start_motor  | Initiate the motor start sequence        |
 | 21          | stop_motor   | Initiate the motor stop sequence         |

@@ -113,22 +113,22 @@ void ReadCommand(){
     modbusTCPClient.coilWrite(13, 0); 
   }
   if (modbusTCPClient.coilRead(14)){
-    // coil14 → white
+    // coil14 → led_white
     led_set(true, true, true);
     modbusTCPClient.coilWrite(14, 0);
   }
   if (modbusTCPClient.coilRead(15)){
-    // coil15 → purple
+    // coil15 → led_purple
     led_set(true, true, false);
     modbusTCPClient.coilWrite(15, 0);
   }
   if (modbusTCPClient.coilRead(16)){
-    // coil16 → yellow
+    // coil16 → led_yellow
     led_set(true, false, true);
     modbusTCPClient.coilWrite(16, 0);
   }
   if (modbusTCPClient.coilRead(17)){
-    // coil17 → indigo
+    // coil17 → led_indigo
     led_set(false, true, true);
     modbusTCPClient.coilWrite(17, 0);
   }
