@@ -4,7 +4,6 @@
 #include <Controllino.h>
 #include <Ethernet.h>
 #include <SPI.h>
-#include <ModbusTCPServer.h>
 
 // Controllino Pin Definitions
 int start_switch = CONTROLLINO_R0;
@@ -31,6 +30,7 @@ IPAddress gateway(192, 168, 1, 1);
 IPAddress subnet(255, 255, 255, 0);
 
 // Modbus Definitions
+EthernetServer ethernetServer(502);
 ModbusTCPServer modbusTCPServer;
 
 // Function Definetions
@@ -59,28 +59,7 @@ void setup() {
   Serial.println(ip);
   Ethernet.begin(mac, ip, gateway, subnet);
   delay(1000); // Wait for Ethernet to initialize
-  Serial.print(F("Ethernet hardware status: "));
-  Serial.println(Ethernet.hardwareStatus() == EthernetNoHardware ? F("No hardware") : F("Hardware OK"));
-  Serial.print(F("Ethernet link status: "));
-  Serial.println(Ethernet.linkStatus() == LinkON ? F("Link ON") : F("Link OFF"));
-  Serial.print(F("Got IP via: "));
-  Serial.println(Ethernet.localIP());
-  delay(1000);
 
-  // —— DHCP Ethernet Setup ——  
-  // Serial.print(F("Attempting DHCP… "));
-  // int dhcpResult = Ethernet.begin(mac);
-  // if (dhcpResult == 0) {
-  //   Serial.println(F("DHCP failed"));
-  //   while (1) {
-  //     delay(1000); // hang here if DHCP fails
-  //   }
-  // }
-  // // DHCP succeeded
-  // Serial.print(F("Got IP via DHCP: "));
-  // Serial.println(Ethernet.localIP());
-  // delay(1000); // Wait for Ethernet to initialize
-  
   // —— Start Modbus TCP server ——  
   if (!modbusTCPServer.begin()) {
     Serial.println(F("ERROR: Failed to start Modbus TCP Server"));
@@ -88,6 +67,9 @@ void setup() {
   }
   Serial.println(F("Modbus TCP Server started successfully"));
   
+  //Start server
+  ethernetServer.begin();
+
   // Reserve coils 0–21
   modbusTCPServer.configureCoils(0, 22);
   Serial.println(F("Modbus coils configured (0-21)"));
@@ -95,40 +77,48 @@ void setup() {
 }
 
 void loop() {
-  // Handle Modbus requests
-  modbusTCPServer.poll();
+  // Check if a new TCP client has connected
+  EthernetClient client = ethernetServer.available();
+  if (client) {
+    Serial.println(F(">> New Modbus client connected"));
+    // Hand over to the Modbus server
+    modbusTCPServer.accept(client);
 
-  // Update Sensor Data Every 50msiku
-  if (millis() - preMillis > 50) {
-    preMillis = millis();
-    ReadAndPackSensor();
+    // While the client remains connected, poll for Modbus requests
+    while (client.connected()) {
+      // Update sensor coils & read commands each time poll() returns true
+      if (modbusTCPServer.poll()) {
+        ReadAndPackSensor();
+        ReadCommand();
+        // Print debug information every 2 seconds
+        if (millis() - debugMillis > 2000) {
+          debugMillis = millis();
+          Serial.println(F("--- Status Update ---"));
+          Serial.print(F("Emergency switch: "));
+          Serial.println(digitalRead(emer_switch) ? "ON" : "OFF");
+          
+          Serial.print(F("Limit sensors (BL,BR,FL,FR): "));
+          Serial.print(analogRead(limit_b_l) == 0 ? "1" : "0");
+          Serial.print(F(","));
+          Serial.print(analogRead(limit_b_r) == 0 ? "1" : "0");
+          Serial.print(F(","));
+          Serial.print(analogRead(limit_f_l) == 0 ? "1" : "0");
+          Serial.print(F(","));
+          Serial.println(analogRead(limit_f_r) == 0 ? "1" : "0");
+          
+          Serial.print(F("Ethernet link: "));
+          Serial.println(Ethernet.linkStatus() == LinkON ? "ON" : "OFF");
+          
+          Serial.println(F("-------------------"));
+        }
+      }
+    }
+
+    Serial.println(F(">> Modbus client disconnected"));
   }
 
-  ReadCommand(); // Read Commands from Server
-
-  // Print debug information every 2 seconds
-  if (millis() - debugMillis > 2000) {
-    debugMillis = millis();
-    Serial.println(F("--- Status Update ---"));
-    Serial.print(F("Emergency switch: "));
-    Serial.println(digitalRead(emer_switch) ? "ON" : "OFF");
-    
-    Serial.print(F("Limit sensors (BL,BR,FL,FR): "));
-    Serial.print(analogRead(limit_b_l) == 0 ? "1" : "0");
-    Serial.print(F(","));
-    Serial.print(analogRead(limit_b_r) == 0 ? "1" : "0");
-    Serial.print(F(","));
-    Serial.print(analogRead(limit_f_l) == 0 ? "1" : "0");
-    Serial.print(F(","));
-    Serial.println(analogRead(limit_f_r) == 0 ? "1" : "0");
-    
-    Serial.print(F("Ethernet link: "));
-    Serial.println(Ethernet.linkStatus() == LinkON ? "ON" : "OFF");
-    
-    Serial.println(F("-------------------"));
-  }
-
-  delay(10); // Delay to avoid bus congestion
+  // Small delay to avoid hammering the server
+  delay(10);
 }
 
 void led_set(bool r, bool g, bool b) {
