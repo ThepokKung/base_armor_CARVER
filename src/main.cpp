@@ -3,6 +3,8 @@
 #include <ArduinoRS485.h>
 #include <Controllino.h>
 #include <Ethernet.h>
+#include <SPI.h>
+#include <ModbusTCPServer.h>
 
 // Controllino Pin Definitions
 int start_switch = CONTROLLINO_R0;
@@ -20,10 +22,13 @@ int limit_f_r = CONTROLLINO_AI3; //limit_4 //Analog input from old code
 
 // Variable Definitions
 long preMillis = 0;
+long debugMillis = 0;
 
 // Ethernet Definitions
-byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED};
+byte mac[] = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
 IPAddress ip(192, 168, 1, 190); // Controllino IP address
+IPAddress gateway(192, 168, 1, 1);
+IPAddress subnet(255, 255, 255, 0);
 
 // Modbus Definitions
 ModbusTCPServer modbusTCPServer;
@@ -34,6 +39,9 @@ void ReadAndPackSensor();
 void ReadCommand();
 
 void setup() {
+  Serial.begin(115200);
+  Serial.println(F("Start Controllinno Modbus Server"));
+
   // IO Setup
   pinMode(start_switch,OUTPUT);
   pinMode(stop_switch,OUTPUT);
@@ -41,34 +49,84 @@ void setup() {
   pinMode(led_green,OUTPUT);
   pinMode(led_blue,OUTPUT);
   pinMode(emer_switch,INPUT);
+  Serial.println(F("IO Setup Complete"));
 
   // Set LED For Testing
   led_set(true,true,true);
 
   // Ethernet Setup
-  Ethernet.begin(mac, ip); // Start Ethernet with the MAC address and IP address
+  Serial.print(F("Starting Ethernet with IP: "));
+  Serial.println(ip);
+  Ethernet.begin(mac, ip, gateway, subnet);
+  delay(1000); // Wait for Ethernet to initialize
+  Serial.print(F("Ethernet hardware status: "));
+  Serial.println(Ethernet.hardwareStatus() == EthernetNoHardware ? F("No hardware") : F("Hardware OK"));
+  Serial.print(F("Ethernet link status: "));
+  Serial.println(Ethernet.linkStatus() == LinkON ? F("Link ON") : F("Link OFF"));
+  Serial.print(F("Got IP via: "));
+  Serial.println(Ethernet.localIP());
   delay(1000);
 
-  // Start Modbus TCP server
+  // —— DHCP Ethernet Setup ——  
+  // Serial.print(F("Attempting DHCP… "));
+  // int dhcpResult = Ethernet.begin(mac);
+  // if (dhcpResult == 0) {
+  //   Serial.println(F("DHCP failed"));
+  //   while (1) {
+  //     delay(1000); // hang here if DHCP fails
+  //   }
+  // }
+  // // DHCP succeeded
+  // Serial.print(F("Got IP via DHCP: "));
+  // Serial.println(Ethernet.localIP());
+  // delay(1000); // Wait for Ethernet to initialize
+  
+  // —— Start Modbus TCP server ——  
   if (!modbusTCPServer.begin()) {
-    // Failed to start
-    while (1); // Infinite loop if server fails to start
+    Serial.println(F("ERROR: Failed to start Modbus TCP Server"));
+    while (1);
   }
-  // Reserve coils 0-4 for sensors, 10-21 for commands
-  modbusTCPServer.configureCoils(0, 22); // Configure coils from 0 to 21
+  Serial.println(F("Modbus TCP Server started successfully"));
+  
+  // Reserve coils 0–21
+  modbusTCPServer.configureCoils(0, 22);
+  Serial.println(F("Modbus coils configured (0-21)"));
+  Serial.println(F("Setup complete, entering main loop"));
 }
 
 void loop() {
   // Handle Modbus requests
   modbusTCPServer.poll();
 
-  // Update Sensor Data Every 50ms
+  // Update Sensor Data Every 50msiku
   if (millis() - preMillis > 50) {
     preMillis = millis();
     ReadAndPackSensor();
   }
 
   ReadCommand(); // Read Commands from Server
+
+  // Print debug information every 2 seconds
+  if (millis() - debugMillis > 2000) {
+    debugMillis = millis();
+    Serial.println(F("--- Status Update ---"));
+    Serial.print(F("Emergency switch: "));
+    Serial.println(digitalRead(emer_switch) ? "ON" : "OFF");
+    
+    Serial.print(F("Limit sensors (BL,BR,FL,FR): "));
+    Serial.print(analogRead(limit_b_l) == 0 ? "1" : "0");
+    Serial.print(F(","));
+    Serial.print(analogRead(limit_b_r) == 0 ? "1" : "0");
+    Serial.print(F(","));
+    Serial.print(analogRead(limit_f_l) == 0 ? "1" : "0");
+    Serial.print(F(","));
+    Serial.println(analogRead(limit_f_r) == 0 ? "1" : "0");
+    
+    Serial.print(F("Ethernet link: "));
+    Serial.println(Ethernet.linkStatus() == LinkON ? "ON" : "OFF");
+    
+    Serial.println(F("-------------------"));
+  }
 
   delay(10); // Delay to avoid bus congestion
 }
