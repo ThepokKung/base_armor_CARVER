@@ -34,7 +34,7 @@ EthernetServer ethernetServer(502);
 ModbusTCPServer modbusTCPServer;
 
 // Function Definetions
-void led_set(bool r, bool g, bool b);
+// void led_set(bool r, bool g, bool b);
 void ReadAndPackSensor();
 void ReadCommand();
 
@@ -52,7 +52,7 @@ void setup() {
   Serial.println(F("IO Setup Complete"));
 
   // Set LED For Testing
-  led_set(true,true,true);
+  // led_set(true,true,true);
 
   // Ethernet Setup
   Serial.print(F("Starting Ethernet with IP: "));
@@ -95,7 +95,7 @@ void loop() {
           debugMillis = millis();
           Serial.println(F("--- Status Update ---"));
           Serial.print(F("Emergency switch: "));
-          Serial.println(digitalRead(emer_switch) ? "ON" : "OFF");
+          Serial.println(!digitalRead(emer_switch) ? "ON" : "OFF");
           
           Serial.print(F("Limit sensors (BL,BR,FL,FR): "));
           Serial.print(analogRead(limit_b_l) == 0 ? "1" : "0");
@@ -121,15 +121,15 @@ void loop() {
   delay(10);
 }
 
-void led_set(bool r, bool g, bool b) {
-  digitalWrite(led_red, r);
-  digitalWrite(led_blue, g);
-  digitalWrite(led_green, b);
-}
+// void led_set(bool r, bool g, bool b) {
+//   digitalWrite(led_red, r);
+//   digitalWrite(led_blue, g);
+//   digitalWrite(led_green, b);
+// }
 
 void ReadAndPackSensor(){
   // Read emergency switch and update Modbus coils
-  modbusTCPServer.coilWrite(0, digitalRead(emer_switch));
+  modbusTCPServer.coilWrite(0, !digitalRead(emer_switch));
 
   // Read bumper sensors and update Modbus coils
   bool t_limit_b_l = (analogRead(limit_b_l) == 0);
@@ -144,46 +144,46 @@ void ReadAndPackSensor(){
 
 void ReadCommand(){
   // LED Control Commands
-  if (modbusTCPServer.coilRead(10)){
-    // coil10 → led_red
-    led_set(true, false, false);
-    modbusTCPServer.coilWrite(10, 0); 
-  }
-  if (modbusTCPServer.coilRead(11)){
-    // coil11 → led_green
-    led_set(false, true, false);
-    modbusTCPServer.coilWrite(11, 0); 
-  }
-  if (modbusTCPServer.coilRead(12)){
-    // coil12 → led_blue
-    led_set(false, false, true);
-    modbusTCPServer.coilWrite(12, 0); 
-  }
-  if (modbusTCPServer.coilRead(13)){
-    // coil13 → led_off
-    led_set(false, false, false);
-    modbusTCPServer.coilWrite(13, 0); 
-  }
-  if (modbusTCPServer.coilRead(14)){
-    // coil14 → led_white
-    led_set(true, true, true);
-    modbusTCPServer.coilWrite(14, 0);
-  }
-  if (modbusTCPServer.coilRead(15)){
-    // coil15 → led_purple
-    led_set(true, true, false);
-    modbusTCPServer.coilWrite(15, 0);
-  }
-  if (modbusTCPServer.coilRead(16)){
-    // coil16 → led_yellow
-    led_set(true, false, true);
-    modbusTCPServer.coilWrite(16, 0);
-  }
-  if (modbusTCPServer.coilRead(17)){
-    // coil17 → led_indigo
-    led_set(false, true, true);
-    modbusTCPServer.coilWrite(17, 0);
-  }
+  // if (modbusTCPServer.coilRead(10)){
+  //   // coil10 → led_red
+  //   led_set(true, false, false);
+  //   modbusTCPServer.coilWrite(10, 0); 
+  // }
+  // if (modbusTCPServer.coilRead(11)){
+  //   // coil11 → led_green
+  //   led_set(false, true, false);
+  //   modbusTCPServer.coilWrite(11, 0); 
+  // }
+  // if (modbusTCPServer.coilRead(12)){
+  //   // coil12 → led_blue
+  //   led_set(false, false, true);
+  //   modbusTCPServer.coilWrite(12, 0); 
+  // }
+  // if (modbusTCPServer.coilRead(13)){
+  //   // coil13 → led_off
+  //   led_set(false, false, false);
+  //   modbusTCPServer.coilWrite(13, 0); 
+  // }
+  // if (modbusTCPServer.coilRead(14)){
+  //   // coil14 → led_white
+  //   led_set(true, true, true);
+  //   modbusTCPServer.coilWrite(14, 0);
+  // }
+  // if (modbusTCPServer.coilRead(15)){
+  //   // coil15 → led_purple
+  //   led_set(true, true, false);
+  //   modbusTCPServer.coilWrite(15, 0);
+  // }
+  // if (modbusTCPServer.coilRead(16)){
+  //   // coil16 → led_yellow
+  //   led_set(true, false, true);
+  //   modbusTCPServer.coilWrite(16, 0);
+  // }
+  // if (modbusTCPServer.coilRead(17)){
+  //   // coil17 → led_indigo
+  //   led_set(false, true, true);
+  //   modbusTCPServer.coilWrite(17, 0);
+  // }
 
   // Motor Control Commands
   if (modbusTCPServer.coilRead(20)){
